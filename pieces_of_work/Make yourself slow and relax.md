@@ -1,4 +1,4 @@
-# Make Yourself Slow and Release
+# Make Yourself Slow and Relax
 
 我的睡眠不好，由来已久。
 
