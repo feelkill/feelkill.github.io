@@ -1,4 +1,4 @@
-原文件地址： http://www.tuicool.com/articles/2iAJjeV
+原文地址： http://www.tuicool.com/articles/2iAJjeV
 
 LevelDB内部通过采用变长编码，对数据进行压缩来减少存储空间，采用CRC进行数据正确性校验。下面就对varint编码进行学习。
 
@@ -32,3 +32,19 @@ Varint 中的每个 byte 的最高位 bit 有特殊的含义，如果该位为 1
 (n << 1> ^ (n >> 63) //sint64
 需要补充说明的是，Protocol Buffer在实现上述位移操作时均采用的算术位移，因此对于(n >> 31)和(n >> 63)而言，如果n为负值位移后的结果就是-1，否则就是0。
 注：简单解释一下C语言中的算术位移和逻辑位移。他们的左移操作都是相同的，即低位补0，高位直接移除。不同的是右移操作，逻辑位移比较简单，高位全部补0。而算术位移则需要视当前值的符号位而定，补进的位和符号位相同，即正数全补0，负数全补1。换句话说，算术位移右移时要保证符号位的一致性。在C语言中，如果使用 int变量位移时就是算术位移，uint变量位移时是逻辑位移。
+
+原文地址： http://www.searchtb.com/2011/05/google-group-varint-%E6%97%A0%E6%8D%9F%E5%8E%8B%E7%BC%A9%E8%A7%A3%E5%8E%8B%E7%AE%97%E6%B3%95%E7%9A%84%E9%AB%98%E6%95%88%E5%AE%9E%E7%8E%B0.html
+
+group varint 是一种极为高效的压缩和解压算法， 只针对 uint32整数，是一种针对特定数据类型的压缩算法， 压缩比不高， 但是速度极快。
+
+int32整数可以通过zigZag转换为 uint32数据。
+
+下面给了2张图 辅助大家理解  varint 和 group varint
+
+我的这个实现版本， 压缩 400M整数数据 耗时 0.56 秒，
+解压 400M整数数据 耗时 0.35 秒
+
+![original varint jpg](varint_encode.jpg)
+
+![google varint jpg](group_varint_encode.jpg)
+
