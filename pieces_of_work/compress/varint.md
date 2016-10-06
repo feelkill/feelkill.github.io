@@ -1,4 +1,4 @@
-http://www.tuicool.com/articles/2iAJjeV
+原文件地址： http://www.tuicool.com/articles/2iAJjeV
 
 LevelDB内部通过采用变长编码，对数据进行压缩来减少存储空间，采用CRC进行数据正确性校验。下面就对varint编码进行学习。
 
@@ -18,12 +18,14 @@ Varint 中的每个 byte 的最高位 bit 有特殊的含义，如果该位为 1
 
 下图演示了 Google Protocol Buffer 如何解析两个 bytes。注意到最终计算前将两个 byte 的位置相互交换过一次，这是因为 Google Protocol Buffer 字节序采用 little-endian 的方式。
 
+![varint picture image](varint_hint.png)
+
 有符号
 
 如果使用int32/int64表示一个负数，该字段的值无论是-1还是-2147483648，其编码后长度将始终为10个字节，就如同对待一个很大的无符号整型一样。反之，如果使用的是sint32/sint64，Protocol Buffer将会采用ZigZag编码方式，其编码后的结果将会更加高效。
 这里简单讲述一下ZigZag编码，该编码会将有符号整型映射为无符号整型，以便绝对值较小的负数仍然可以有较小的varint编码值，如-1。下面是ZigZag对照表：
 
-
+![varint int32 image](encode_sign_int.png)
 
 其公式为：
 (n << 1) ^ (n >> 31) //sint32
