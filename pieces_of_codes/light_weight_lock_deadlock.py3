@@ -1,10 +1,10 @@
 #!/usr/bin/python3
 
-=================================================  generate requriing-holding lockid information area =====================================================
+#=================================================  generate requriing-holding lockid information area =====================================================
 
 
 
-=================================================  deadlock checking area =====================================================
+#=================================================  deadlock checking area =====================================================
 
 def debug_holding_requiring_dict (d):
     # print holding_requiring_dict for debug
@@ -171,7 +171,7 @@ def describe_deadlock(requiring_relation, holding_relation):
                 requiring_relation[idx_rel][0], requiring_relation[idx_rel][1], holding_relation[idx_rel][0]))
             idx_rel = idx_rel + 1
 
-=================================================  uttest area =====================================================
+#=================================================  uttest area =====================================================
 
 def uttest_results(testname, deadlock, requiring_list, holding_list):
     if (deadlock == False):
