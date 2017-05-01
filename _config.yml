@@ -1,3 +1,50 @@
-title: 文刀三少
+# Site settings
+title: 张朝威的博客
 email: feelkill2009@gmail.com
-theme: jekyll-theme-minimal
+description: > # this means to ignore newlines until "baseurl:"
+  张朝威的博客
+baseurl: "" # the subpath of your site, e.g. /blog/
+url: http://feelkill.github.io  # the base hostname & protocol for your site
+rss_url: /pages/feed.xml
+author: Zhang Chaowei
+
+# Sidebar filter
+# Choose 'tag' or 'category' as filter in sidebar.
+filter: 'category'
+recent_num: 20
+
+# Social account
+# twitter: 
+# weibo: 
+github: feelkill
+# instagram: 
+# linkedin: 
+
+# avatar and Favicon
+avatar: /assets/img/monkey_head.jpg
+# favicon: 
+
+# disqus config
+disqus:
+  shortname: feelkill
+
+# google analytics config
+ga:
+#  id: 
+#  url: feelkill.github.io
+
+# Build settings
+permalink: /:year/:month/:day/:title.html
+markdown: kramdown
+highlighter: rouge
+mathjax: disabled
+sass:
+  style: compressed
+
+# Jekyll Plugin
+# https://help.github.com/articles/adding-jekyll-plugins-to-a-github-pages-site/
+gems:
+  - jekyll-sitemap
+  - jekyll-seo-tag
+  - jekyll-feed
+
