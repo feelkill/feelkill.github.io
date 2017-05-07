@@ -14,15 +14,15 @@ filter: 'category'
 recent_num: 20
 
 # Social account
-# twitter: 
-# weibo: 
+twitter: 
+weibo: 
 github: feelkill
-# instagram: 
-# linkedin: 
+instagram: 
+linkedin: 
 
 # avatar and Favicon
-avatar: /assets/img/monkey_head.jpg
-# favicon: 
+avatar: /assets/img/monkey_head.jpg # http://7u2ho6.com1.z0.glb.clouddn.com/site-avatar.png
+favicon: http://7u2ho6.com1.z0.glb.clouddn.com/site-favicon.ico
 
 # disqus config
 disqus:
@@ -30,8 +30,8 @@ disqus:
 
 # google analytics config
 ga:
-#  id: 
-#  url: feelkill.github.io
+  id: 
+  url: feelkill.github.io
 
 # Build settings
 permalink: /:year/:month/:day/:title.html
