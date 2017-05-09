@@ -2,19 +2,21 @@
 layout: post
 title: "install systemtap under fedora"
 date: 2017-05-06
+category: 工具
+keywords: systemtap, fedora, kernel-devel, kernel-debuginfi
 ---
 
-# 目的
+## 目的
 
 记录在fedora OS下面安装systemtap过程中所遇到的问题以及解决的方法。
 
-# OS环境
+## OS环境
 
 fedora 25 
 
 kernel version: 4.9.xx-yy.f25.x86_64 ( 当时的小版本未记录，以xx-yy来替代 )
 
-# 安装过程
+## 安装过程
 
 首先需要获得正确的linux kernel版本号: —— 这一点相当地重要，后续的kernel包都需要使用到这一信息，当且仅当kernel包版本是与该版本号对应一致的，安装才会成功
 
@@ -84,7 +86,7 @@ Pass 5: run completed in 10usr/40sys/512real ms.
 
 恭喜你，systemtap已经成功安装在你的操作系统上了。下一步，就看你怎么用它了。
 
-# 参考文档
+## 参考文档
 
 * [安装systemtap的主要官方指导文档 https://sourceware.org/systemtap/SystemTap_Beginners_Guide/using-systemtap.html#using-setup](https://sourceware.org/systemtap/SystemTap_Beginners_Guide/using-systemtap.html#using-setup)
 * [内核安装参考 http://www.2cto.com/os/201204/125945.html](http://www.2cto.com/os/201204/125945.html)
