@@ -1,4 +1,10 @@
-# Why Don't You Complain
+---
+layout: post
+title: "你为什么就不报怨呢？"
+date: 2015-04-30
+category: 自省
+keywords: 报怨, 自动化, 极客,
+---
 
 程序员，你为什么不抱怨呢？ 我就不明白了。
 

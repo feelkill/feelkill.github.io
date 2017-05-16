@@ -1,4 +1,10 @@
-# Make Yourself Slow and Relax
+---
+layout: post
+title: "让自己慢下来，放松下来"
+date: 2015-09-18
+category: 自省
+keywords: 实践, 验证, 垂构, code clean
+---
 
 我的睡眠不好，由来已久。
 
