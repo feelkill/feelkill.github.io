@@ -1,7 +1,7 @@
 ---
 layout: post
 title: "不要做伪勤奋者"
-date: 2015-05-19
+date: 2017-05-19
 category: 自省
 keywords: 伪勤奋，闭环，思考
 ---
