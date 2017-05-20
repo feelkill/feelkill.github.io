@@ -166,37 +166,108 @@ Kudu采用了Raft协议来实现表数据的复制，在具体的实现过程中
 
 #### 元数据的管理者
 
+master上有一个特殊表用于存储catalog信息，
+* 这个表是不允许用户直接访问的
+* keep a full write through cache of the catalog in memory at all times 对内存中的元信息总是使用直写缓存
+
+假定硬件的内存是很大的，而每个表的元数据是很小的，我们并不希望元数据的管理在将来成为了一个问题。如果确定成为问题的话，**修改为page cache实现应该会是框架上的一个直接的革新**。
+
+catalog表维护着系统中的每一个表的所有状态。特别是，它保存着表定义的当前版本，表的当前状态（创建，运行，删除，等等）， 组成表的tablets集合。 当master要求创建一个新表时，它首先向catalog表中写一个表记录，表示一个 **_CREATING_** 状态。异步地，master会选择tablet服务器来存放tablet replicas，创建master端的tablet元信息，发送一个异步请求要tablet服务器新建replicas。
+* 如果在多数节点上，replica创建失败或者超时的话，tablet能够安全地删除掉。 
+* 如果失败发生在中间的话，catalog表中的记录状态将说明需要前滚，master需要从失败的地方恢复重做。
+
+表定义的更改和删除这些操作同样使用相同的方法。master要确保这些修改能够扩散到相关的tablets服务器，然后才能够将它的新状态写入到自己的存储介质上。在所有情况下，从master发送往tablets服务器的消息必须设计为**幂等的**，所以crash或者重启的话，它们也能够安全地重新发送到其他tablet服务端。
+
+因为catalog表自身也是在Kudu进行持久化的，master可以使用Raft将其持久状态复制到master备上。当前，这些master备只是作为Raft的跟着者(follower)，并不会直接响应客户端的请求。由于依赖于Raft的选举算法，master备升主时，与主重启过程是一样的，扫描自己的catalog表，加载自己的内存cache，以活主方式启动了。
+
 #### 集群的协调者
 
 #### tablets目录
 
 ## tablet存储
 
+在tablet server上，每个tablet副本都做为一个完全独立的实体，从而与上层的分布式系统和分区进行解耦。
+
+也正是这种解耦，我们可以实现在存储层的过滤，包括: per-table, per-tablet, per-replica。
+
 ### 简述
+
+在Kudu的tablet存储设计中，主要考虑如下几个因素：
+
+* 快速的列扫描，能够达到可以媲美Parquet和ORCFile的类似的性能，从而可以支撑分析业务。主要是大部分的扫描是基于高效编码的列数据文件； 
+* 低延时的随机更新，在随机访问时，希望达到Olog(n)的时间复杂度
+* 性能的一致性，用户更期望在峰值性能和可预期性能之间达到权衡
 
 ### RowSets
 
+为了达到这个目的，Kudu从头设计了一个全新的混合列式存储架构。在这个新的存储架构中，引入了一个存储单元RowSets，每个tablets都是由多个RowSets组成，Rowsets分为内存中的MemRowSets和磁盘的DiskRowSets。任何一条存活的数据记录都只属于一个RowSet。所以，RowSets形成了行的不相交集。然而要注意的是，不同RowSets的主键范围是可能相交的。
+
+在任意时刻，每个tablet都只有一个唯一的MemRowSets，用于存储最近插入的行。有一个后台线程定期会flush MemRowSets到磁盘，当MemRowSets被flush时，一个新的空的MemRowSets会被创建来替换它，而被flush的MemRowSets则会变成一个或者多个DiskRowSets。Flush过程是完全并行的，对正在flush的MemRowSets的读操作还会在MemRowsets上进行，而更新和删除操作则会被记录下来，在flush完成后更新到磁盘上。
+
 ### MemRowSet的实现
+
+MemRowSets的实现是一个支持并发的内存B-Tree，借鉴了MassTree的实现，并且做了一些修改：
+1. 不支持在树上进行元素的删除，而是采用MVCC记录删除的信息。因为MemRowSets最终会flush到磁盘，因此记录的删除可以推迟到flush的过程中。
+2. 不支持在树上对元素的任意的修改，而只是在值的修改不改变值占用的空间大小时才支持。
+3. 叶子节点的连接是通过一个next指针来实现，这样可以显著提高顺序scan的性能。
+4. 为了提高随机访问的scan的性能，采用了比较大的节点的空间大小，每个是4个CPU cache-lines的大小（256字节）
+5. 使用SSE2预取指令集以及LLVM编译优化来提高树的访问性能
+
+MemRowSets是以行宽度来存储记录的。因为数据总是在内存中，所以它可以提供可接受的性能。
+
+为了形成插入到B树中的key，我们使用前面所述的方法对记录的主键进行保序编码，这样树的遍历就可以通过简单的memcmp操作进行比较。
 
 ### DiskRowSet的实现
 
+DiskRowSets的实现同样做了很多实现的优化来提高性能，包括：
+
+每达到一个32MB的IO块后，向前滚动DiskRowSet.这样确保DiskRowSet不会太大，允许进行增量地压缩。因为MemRowSet是有序的，所以下盘后的DiskRowSet也是有序的，每一个滚动的段(segment)的主键都是没有交集的。
+
+DiskRowSets在实现时被分成了两个部分，一个基础的数据部分(base data)以及一个变化存储（delta stores)。
+* Base data是采用列式存储来存储数据，每一列被切分成一个连续的数据块写到磁盘，并且分成小的页来支持更细粒度的随机访问。它还包含一个内嵌的B-Tree索引，从而方便定位页。
+* base data的存储支持bzip2,gzip,LZ4的压缩。
+
+除了每列数据会flush到磁盘，Kudu还在磁盘写入了一个主键索引列，存储了每一行的主键编码，同时还写了一个布隆过滤器到磁盘，从而方便判断一行是否存在。
+
+因为列式存储的数据不容易更新，所以base data在写到磁盘后就不会再改变，变化的值都是通过delta stores来进行存储。delta stores通过在内存的DeltaMemStores和磁盘上的DeltaFiles来实现。DeltaMemStore也是一个支持并发的B-Tree。DeltaFiles是一个二进制的列式数据块。delta stores包含了列数据的所有的变化，维护了一个从（row_offset,timestamp)数组到RowChangeList记录的映射。
+
 ### Delta Flushes
 
-### 插入的路径
+DeltaMemStore是基于内存的存储，空间有限。相同的后台线程（调度MemRowSets写盘的线程）也会调度DeltaMemStore的周期写盘。当DeltaMemStore写盘之后，一个新的DeltaFile就会生成。一个DeltaFile就是一个简单的二进制列数据文件。
 
-### 读的路径
+### INSERT路径
+
+### READ路径
 
 ### 延时物化
 
+Kudu存储的实现对于列数据采用Lazy Materializtion从而提高读取的性能。
+
 ### Delta Compaction
 
+因为变化存在delta stores中，而如果delta store数据非常多，则会发生性能问题。Kudu有后台线程会定期根据delta stores的大小来进行压缩，将变化写回到base data中。
+
+主要是估算一个比例，即base data中记录数目与delta中的记录数目的比值。
+
+当进行回写时，主要是针对列的子集。例如，一个更新操作只批量更新了表中的单个列，那么回写也只针对这一个单列进行，以避免不必要的IO操作。
+
 ### RowSet Compaction
+
+除了delta store的压缩，RowSet也会定期做压缩，通过RowSet压缩，将不同的DiskRowSets合并为一个RowSet(主要是基于键合并key-merge，并保证其合并后有序), 可以实现：
+* 移除删掉的行
+* 通过基于key的合并，减少同样key范围DiskRowSets的数量。
 
 ### 调度管理
 
 ## 与Hadoop的集成
 
 ### MapR  + Spark
+
+Kudu提供对Hadoop Input和Output数据的binding，从而可以方便的与Hadoop MapReduce集成。这个binding同样可以方便的与Spark集成，一个小胶水层可以将Kudu表bind为Spark的DataFrame或者Spark SQL的table。通过这个集成，Spark可以支持Kudu的几个关键的特性：
+* 数据本地性 – 能够知道表的数据在哪个tablet server上，从而支持本地数据处理和计算
+* 列规划 – 提供了一个简单的API使用户可以选择哪些列是他们的任务中需要的，从而减少IO读取
+* 委托下沉 – 提供一个简单的API去指定数据在被传递给任务时可以在服务端进行计算，从而提高性能。
+
 
 ### Impala
 
