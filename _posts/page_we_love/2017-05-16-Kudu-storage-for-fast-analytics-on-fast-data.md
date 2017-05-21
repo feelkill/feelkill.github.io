@@ -119,6 +119,12 @@ Kudu内部使用时间戳来实现并发控制，它不允许用户手动设定�
 
 ## 架构
 
+> Kudu 有两种类型的组件， Master Server 和 Tablet Server 。 Master 负责管理元数据。这些元数据包括 talbet 的基本信息，位置信息。 Master 还作为负载均衡服务器，监听 Tablet Server 的健康状态。对于副本数过低的 Tablet ， Master 会在起 replication 任务来提高其副本数。 Master 的所有信息都在内存中 cache ，因此速度非常快。每次查询都在百毫秒级别。 Kudu 支持多个 Master ，不过只有一个 active Master ，其余只是作为灾备，不提供服务。
+
+> ablet Server 上存了 10~100 个 Tablets ，每个 Tablet 有 3 （或 5 ）个副本存放在不同的 Tablet Server 上，每个 Tablet 同时只有一个 leader 副本，这个副本对用户提供修改操作，然后将修改结果同步给 follower 。 Follower 只提供读服务，不提供修改服务。副本之间使用 raft 协议来实现 High Availability ，当 leader 所在的节点发生故障时， followers 会重新选举 leader 。根据官方的数据，其 MTTR 约为 5 秒，对 client 端几乎没有影响。 Raft 协议的另一个作用是实现 Consistency 。 Client 对 leader 的修改操作，需要同步到 N/2+1 个节点上，该操作才算成功。
+
+![](http://static.open-open.com/lib/uploadImg/20160811/20160811195051_617.jpg)
+
 ### Cluster角色
 
 kudu的集群架构与HDFS,HBase架构类似，Kudu有一个Master Server负责元数据的管理，多个Tablet Server负责数据的存储。Master Server可以通过复制来是先容错和故障恢复。
@@ -155,6 +161,19 @@ Kudu采用了Raft协议来实现表数据的复制，在具体的实现过程中
 
 #### 配置变化
 
+Kudu通过one-by-one算法来实现Raft配置变更。 在这种方法里，每一次配置变化中最多涉及一个投票者数目的变化。那么，从3个replica增长为5个replica的话，就需要进行两次独立的变更，首先是从3到4，再是从4到5。
+
+Kudu是使用 **_remote bootstrap_**这种方式来新增一个server的。在我们的设计里，要新增一个replica的话，首先将它新增为配置中的一员，然后通知目标server说将会有一个新增的replica要去复制它。 in details
+1. 完成第一步
+2. 当前的leader就会触发一个 *StartRemoteBootstrap* RPC，目标server就会从当前leader上拉一个快照的tablet数据和日志，直接所有传输都完成
+3. 新增server按照正常restart过程一样，打开tablet
+4. tablet打开它的数据，replay它的WAL日志，
+5. 新增server回复leader一个Raft RPC,表明自己达到了 full-functional replica状态
+
+实现的时候，新增server是以 **VOTER** 角色立即加入的。这会有一个缺陷是，配置从3谈到4时，四分之三的server必须确认每一个操作。因为新增server还在复制过程中，它不能够确认操作。 如果另一个server发生了crash的话， tablet就可能变得写不可用，一直到 remote bootstrap结束。
+
+要解决这个问题，我们计划引入一个新的状态为 **PRE_VOTE** ，在这个状态中新增server是不作为投票者之内的。只有当新增server完成了以上5步之后，当前leader方才会删除 **PRE_VOTE** 状态记录，并进行另一个配置更改，将新增server作为一个正式的 **VOTER** 存在。
+
 ### Kudu Master
 
 前面提到了Kudu的集群架构，具体到Kudu的Master进程，它主要的职责包括：
@@ -182,7 +201,21 @@ catalog表维护着系统中的每一个表的所有状态。特别是，它保�
 
 #### 集群的协调者
 
+每一个tablet server都在master里都静态地配置成一个host name列表。 启动的时候，tablet server向master注册，发送一个tablet reports来说明它上面的所有tablet集。一开始，这个tablet reports是关于所有tablets的信息。后续的tablet report则是增量的，仅需要包含那些新加的、删除的、修改的tablet。
+
+一个重要的设计点是，当master为作catalog信息的可信源时，它也只是作为一个观察者的身份存在，观察集群的动态变化。tablet server则总是带权威性的，包括了tablet replicas的位置、当前Raft配置、tablet的当前定义版本，等等。因为所有的tablet replica是使用Raft来达到状态变化一致的，所有的更改都会映射到到一条专门的Raft操作上。这便利master可以确信：所有的状态更新都是幂等的，它只需要简单地进行比较操作。如果发现变更版本还不如它自己本身版本的更新，它就会直接丢弃掉这个变更。
+
+TODO：此部分首先要看一下Raft算法的实现。
+
 #### tablets目录
+
+为了读写的高效性， 客户端在向服务端查询tablet的位置信息后， 会在本地进行缓存处理。 缓存的信息包括了分区键范围和它的Raft配置。 如果客户端信息过期的话，而与它联系的服务端已不再是一个leader的话，
+1. 客户端向服务端发送一个写操作，该服务端拒绝该请求
+2. 客户端联系master询问谁是新的leader， master告诉它新leader是谁
+
+上面的第2步是的信息是可以合并的，通过piggy-back(背包)方式直接一次交互完成。
+
+因为master在内存中维护着所有tablet分区范围的信息，就需要考虑是否为请求服务数目scale的问题。如果这部分一旦成为瓶颈的话，我们注意到位置信息即使过期也是安全的，所以就可以对这一部分也进行分区和复制到多个机器上，从而解决scale的问题。
 
 ## tablet存储
 
@@ -278,6 +311,16 @@ Kudu提供对Hadoop Input和Output数据的binding，从而可以方便的与Had
 ### 与Phoenix的比较
 
 ### 随机访问的性能
+
+## 使用案例
+
+> 小米是 Hbase 的重度用户，他们每天有约 50 亿条用户记录。小米目前使用的也是 HDFS + HBase 这样的混合架构。可见该流水线相对比较复杂，其数据存储分为 SequenceFile ， Hbase 和 Parquet 。
+
+![](http://static.open-open.com/lib/uploadImg/20160811/20160811195052_558.jpg)
+
+在使用 Kudu 以后， Kudu 作为统一的数据仓库，可以同时支持离线分析和实时交互分析。
+
+![](http://static.open-open.com/lib/uploadImg/20160811/20160811195052_697.jpg)
 
 ## 阅读总结
 
