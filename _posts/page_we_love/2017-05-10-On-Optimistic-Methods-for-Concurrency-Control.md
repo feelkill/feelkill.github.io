@@ -52,7 +52,7 @@ keywords: 并发控制, OCC, 乐观并发, 事务处理
 
 **主要优点**
 1. 事务冲突很少见;
-2. 本协议具有普世性;
+2. 本协议具有普遍性;
 3. 无死锁发生;
 
 **主要想法**
@@ -150,7 +150,11 @@ for n E write set do exchange(n, copies[n]).
 
 在事务执行过程中，显式地给每一个事务赋于一个唯一的事务号t(i)，也就是说，无论何时，下面描述都要成立，以保证serially equivalent schedule。
 
-> 只要时间t(i) < t(j)成立时，事务T<SUB>i</SUB>一定比事务T<SUB>j</SUB>开始的早
+> 只要时间t(i) < t(j)成立时，事务T<SUB>i</SUB>一定比事务T<SUB>j</SUB>来的早
+
+原文如下：
+
+> there must exist a serially equivalent schedule in which transaction T<SUB>i</SUB> comes before transaction T<SUB>j</SUB> whenever t(i) < t(j). 
 
 要保证这一点的成立，这个排列中的两个事务需要满足下面的三个要求之一；
 
