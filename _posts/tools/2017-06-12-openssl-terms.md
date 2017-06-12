@@ -68,7 +68,7 @@ keywords: OpenSSL, CA
 
 **Cross Certificate**
 
-
+主要用于连接两个PKI，一般成对出现。
 
 **User Certificate**
 
