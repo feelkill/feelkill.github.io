@@ -62,9 +62,11 @@ keywords: OpenSSL, CA
 
 **CA Certificate**
 
-
+一个CA的证书。用于签发证收和CRL
 
 **Root Certificate**
+
+根证书，处于PKI的根结点上，是自签发的。是PKI的可信网络
 
 **Cross Certificate**
 
