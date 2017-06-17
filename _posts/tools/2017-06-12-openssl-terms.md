@@ -2,8 +2,8 @@
 layout: post
 title: "OpenSSL: PKI组成"
 date: 2017-06-12
-category: 工具
-keywords: OpenSSL, CA
+category: 网络
+keywords: OpenSSL, CA, SSL, PKI
 ---
 
 ![](/assets/2017/openssl-pki-00.png)
