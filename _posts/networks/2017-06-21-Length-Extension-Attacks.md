@@ -23,6 +23,8 @@ hash的输入是消息本身，它不再需要额外的输入。你可以通过h
 
 而MAC则还需要一个key作为种子。这样子，可以保证不仅数据本身是没有修改过的，而且保证了是发送者是我们所期望的那个。否则，在不知道key的情况下，就可以有攻击者会使用这个来生成刺探消息了。
 
+这篇文章主要是针对MAC进行的攻击，即**怎么样伪造消息使得不是真正的发送者**。
+
 ## MAC的简单例子
 
 最简单的MAC算法是这样的：服务器把key和message连接到一起，然后用摘要算法如MD5或SHA1取摘要。
@@ -57,6 +59,8 @@ else
 哈希摘要算法，如MD5,SHA1, SHA2等，都是基于Merkle–Damgård结构。这类算法有一个很有意思的问题：如果你知道message和MAC，只需再知道key的长度，尽管不知道key的值，也能在message后面添加信息并计算出相应MAC。
 
 > Example: message + padding +extension
+
+说明：按照我的理解，服务器对文件名的解析，在被欺骗之后，应该使用的是三部分： 真实的文件路径 ＋ padding部分 + extension部分。 这样，才能经过服务器的检验；如果服务器对本地文件路径进行再次检验的话，除非这个欺骗信息所指的路径确实存在，否则有可能是会被拒绝的。 那么在被承认的前提下，如果文件指向的是服务器的保密文件（例如用户密码文件），那么这些重要的信息就有可能被泄露出去。
 
 继续用上面的例子，对文件下载的功能进行长度扩展攻击：
 ```
@@ -129,6 +133,10 @@ key + message + padding to the next block        <-- 这一部分为真实的数
 解决这个漏洞的办法是使用[HMAC](https://en.wikipedia.org/wiki/HMAC)算法。该算法大概来说是这样 ：MAC = hash(key + hash(key + message))， 而不是简单的对密钥连接message之后的值进行哈希摘要。
 
 具体HMAC的工作原理有些复杂，但你可以有个大概的了解。重点是，由于这种算法进行了双重摘要，密钥不再受本文中的长度扩展攻击影响。HMAC最先是在1996年被发表，之后几乎被添加到每一种编程语言的标准函数库中。
+
+## 总结
+
+![](/assets/2017/length-extension-attack-summary.jpg)
 
 ## 参考
 1. [科普哈希长度扩展攻击(Hash Length Extension Attacks) ](http://www.freebuf.com/articles/web/31756.html)
