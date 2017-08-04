@@ -35,15 +35,35 @@ ga:
 
 # Build settings
 permalink: /:year/:month/:day/:title.html
-markdown: kramdown
 highlighter: rouge
+# highlighter: pygments
+markdown: redcarpet # kramdown 
+kramdown:
+  input:         GFM
+  auto_ids:      true
+  auto_id_prefix: 'id-'
+  # footnote_nr:   1
+  # entity_output: as_char
+  # toc_levels:    1..6
+  # smart_quotes:  lsquo,rsquo,ldquo,rdquo
+  # use_coderay:   true
+
+  # coderay:
+  #   coderay_wrap:              div
+  #   coderay_line_numbers:      inline
+  #   coderay_line_number_start: 1
+  #   coderay_tab_width:         2
+  #   coderay_bold_every:        10
+  #   coderay_css:               style
+redcarpet:
+    extensions: ["fenced_code_blocks", "tables", "highlight", "with_toc_data", "strikethrough", "underline"]
 mathjax: disabled
 sass:
   style: compressed
 
 # Jekyll Plugin
 # https://help.github.com/articles/adding-jekyll-plugins-to-a-github-pages-site/
-gems:
+plugins:
   - jekyll-sitemap
   - jekyll-seo-tag
   - jekyll-feed
