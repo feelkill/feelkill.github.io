@@ -27,7 +27,7 @@ postgres中快照的主要数据结构如下，它主要描述了某一时刻数
 ```
 typedef struct SnapshotData 
 { 
-    SnapshotSatisfiesFunc satisfies;    /*行测试函数指针*/ 
+    SnapshotSatisfiesFunc satisfies;    /* 元组测试函数指针*/ 
 
 
     TransactionId xmin;            /* id小于xmin的所有事务更改在当前快照中可见 */ 
@@ -48,20 +48,22 @@ typedef struct SnapshotData
 
 这里需要注意的是，所有的事务范围被划分为了四个部分，所有活跃事务存储在了一个数组中，它们是一个点的集合，而不是一个连续范围的集合。这一部分的信息完全地表述了文章开始所述的第一点。紧接着，就需要说明与快照相对应的一些规则。不同的判定规则应用于不同的可见性判定，主要提供的判定规则有：
 
-* SnapshotNowData/HeapTupleSatisfiesUpdate
-* SnapshotSelfData
-* SnapshotAnyData
-* SnapshotToastData
-* HeapTupleSatisfiesDirty
-* HeapTupleSatisfiesMVCC
-* HeapTupleSatisfiesVacuum
+* NOW快照规则
+* UPDATE快照规则
+* SELF快照规则
+* ANY快照规则
+* TOAST快照规则
+* DIRTY快照规则
+* MVCC快照规则
+* VACUUM快照规则
 
+这部分规则的实现就是通过MVCC中所述的元组的可见性判定规则的函数来实现的。
 
 ## 与MVCC的关系
 
-整体来讲，前一文章所述的元组的多版本信息也顶多是提供了一个可以进行并发控制的基础信息； 它需要与本节所述的快照以及规则结合起来，才能够决定一个元组的某个版本是否对一个快照可见的。
+整体来讲，前一文章所述的元组的多版本信息也顶多是提供了一个可以进行并发控制的基础信息，以及不同版本的元组的可见性判定规则； 它需要与本节所述的快照以其规则结合起来，才能够决定一个元组的某个版本是否对一个快照可见的。总体来看，MVCC与Snapshot这二者的关联如下：
 
-待补图
+![](/assets/2017/pg_mvcc_and_snapshot.png)
 
 ## 参考
 * 《PostgreSQL数据库内核分析》
