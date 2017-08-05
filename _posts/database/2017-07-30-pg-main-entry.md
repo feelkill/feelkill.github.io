@@ -6,5 +6,5 @@ category: 数据库
 keywords: PostgreSQL,
 ---
 
-* [PostgreSQL之MVCC](/2017/08/01/PostgreSQL-mvcc.html)
-* [PostgreSQL之snapshot](/2017/08/02/PostgreSQL-snapshot.html)
+* [PostgreSQL之MVCC](/2017/08/01/pg-mvcc.html)
+* [PostgreSQL之Snapshot](/2017/08/02/pg-snapshot.html)
