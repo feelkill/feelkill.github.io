@@ -1,9 +1,9 @@
 ---
 layout: post
-title: "postgresql之Snapshot"
+title: "PostgreSQL之Snapshot"
 date: 2017-08-02
 category: 数据库
-keywords: postgresql, snapshot, 快照
+keywords: PostgreSQL, snapshot, 快照
 ---
 
 ## 概述

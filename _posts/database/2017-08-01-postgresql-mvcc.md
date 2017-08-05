@@ -1,12 +1,12 @@
 ---
 layout: post
-title: "postgresql之MVCC	"
+title: "PostgreSQL之MVCC	"
 date: 2017-08-01
 category: 数据库
-keywords: postgresql, mvcc, 并发控制
+keywords: PostgreSQL, mvcc, 并发控制
 ---
 
-对postgresql也学习了一段时间了，感觉到更多是要对已学习的知识进行总结和结构化，所以会慢慢地写一些关于数据库方法的文章。
+对PostgreSQL也学习了一段时间了，感觉到更多是要对已学习的知识进行总结和结构化，所以会慢慢地写一些关于数据库方法的文章。
 
 ## 背景
 
@@ -16,11 +16,11 @@ MVCC全称是Multiversion Concurrency Control(多版本并发控制)的缩写，
 
 ## 实现
 
-在不同的数据库里，其存储形式是不一样的，实现方式也不同。在PostgreSQL里，新老版本数据是混在一起的，Oracle和Innodb里是分开存储的，像Oracle有回滚段（UNDO段）。oracle的实现细节需要再了解，这里主要是说postgresql的实现。
+在不同的数据库里，其存储形式是不一样的，实现方式也不同。在PostgreSQL里，新老版本数据是混在一起的，Oracle和Innodb里是分开存储的，像Oracle有回滚段（UNDO段）。oracle的实现细节需要再了解，这里主要是说PostgreSQL的实现。
 
-与MVCC紧密相关的一个概念是时间（点），这可以由真正的时间值来实现，也可以用一个递增有序的逻辑数值来表示。postgresql中采用了后者，并同时来标识一个事务，即XID。当一个事务开始的时候，Postgres会增加XID值并赋给当前的事务，Postgres也会对系统里的每一个元组附上事务信息，这可以用来判断该行在其他事务中是否可见。
+与MVCC紧密相关的一个概念是时间（点），这可以由真正的时间值来实现，也可以用一个递增有序的逻辑数值来表示。PostgreSQL中采用了后者，并同时来标识一个事务，即XID。当一个事务开始的时候，Postgres会增加XID值并赋给当前的事务，Postgres也会对系统里的每一个元组附上事务信息，这可以用来判断该行在其他事务中是否可见。
 
-那么，XID在postgresql中是怎么与MVCC挂起钩来着呢？这就要看最主要的insert/update/delete三个操作了； 其中，postgresql对update的实现基本等同于delete+insert的。所以，等同地可以只看一下insert/delete是怎么使用XID的。主要的数据结构涉及两下，如下所详述。
+那么，XID在PostgreSQL中是怎么与MVCC挂起钩来着呢？这就要看最主要的insert/update/delete三个操作了； 其中，PostgreSQL对update的实现基本等同于delete+insert的。所以，等同地可以只看一下insert/delete是怎么使用XID的。主要的数据结构涉及两下，如下所详述。
 
 ```
 typedef struct HeapTupleFields
@@ -35,7 +35,7 @@ typedef struct HeapTupleFields
 	}			t_field3;
 } HeapTupleFields;
 ```
-<center>来自postgresql源码文件htup_detail.h</center><br/>
+<center>来自PostgreSQL源码文件htup_detail.h</center><br/>
 
 当插入一个元组的时候，Postgres存储XID值并叫它 XMIN；这是一个隐藏字段，就专门地存储与insert相关的事务数值，参照上面结构体中的t\_xmin成员。对当前事务来说，每一个XMIN值比当前事务的XID要小、并且该事务是已提交的元组，对于当前事务都是可见的。举个很简单的例子：你可以开启一个事务，假如以begin开始，然后插入几行数据，在Commit之前，这些数据对其他事务来说都是不可见的，直到你做了Commit。一旦我们做了Commit操作(XID会增长)，对其他事务来说已经满足XMIN<XID，所以其他事务就能看到在该事务提交后的东西。获得当前事务的XID值比较简单：SELECT txid_current();
 
@@ -427,10 +427,10 @@ postgres=> SELECT *, xmin, xmax, cmin, cmax FROM test;
 
 ## 参考
 * [Postgresql的隐藏系统列](http://my.oschina.net/Kenyon/blog/63668) 
-* [PostgreSQL Concurrency with MVCC](https://devcenter.heroku.com/articles/postgresql-concurrency)
-* [postgresql的MVCC实现](https://my.oschina.net/Kenyon/blog/108850)
+* [PostgreSQL Concurrency with MVCC](https://devcenter.heroku.com/articles/PostgreSQL-concurrency)
+* [PostgreSQL的MVCC实现](https://my.oschina.net/Kenyon/blog/108850)
 * [heap tuple header struct](https://github.com/postgres/postgres/blob/master/src/include/access/htup_details.h)
-* [postgresql的MVCC原理](http://www.jasongj.com/sql/mvcc/)
+* [PostgreSQL的MVCC原理](http://www.jasongj.com/sql/mvcc/)
 * 《PostgreSQL数据库内核分析》
 
 ## 修订历史
