@@ -42,7 +42,7 @@ keywords: Maglev, 负载均衡， 一致性哈希， 网络负载
 
 ## 系统总述
 
-![Figure 2:Maglev packet flow](https://segmentfault.com/img/remote/1460000009565792?w=1556&h=934)
+![Figure 2:Maglev packet flow](/assets/2017/maglev-pakage-flow.jpg)
 
 Maglev是部署在谷歌的前端服务的位置上，包含了大小可变的集群。上图是一个简化了的架构。
 
@@ -73,7 +73,7 @@ config manager负责解析和校正配置对象。所有配置的更新都是原
 
 ## forwarder的设计和实现
 
-![Figure 4: Maglev forwarder structure](https://segmentfault.com/img/remote/1460000009565793?w=1122&h=766)
+![Figure 4: Maglev forwarder structure](/assets/2017/maglev-forwarder-struct.jpg)
 
 linux内核并不涉及这些。总体来讲，
 
