@@ -6,15 +6,16 @@
 
 max_lookup_tab_size = 65537
 
+# node name hashing function
 def str_hash(name):
     return abs(hash(name))
 
 class maglev_hash:
-    backends_num = 13
-    lookuptab_size = 5
-    permutation = []
-    lookuptab = []
-    backend_list = []
+    backends_num = 13   # => N
+    lookuptab_size = 5  # => M
+    permutation = []    # => prefer list
+    lookuptab = []      # => lookup table
+    backend_list = []   # => backend list
     def __init__(self, nodes, lookup_size):
         self.backends_num = len(nodes)
         self.lookuptab_size = lookup_size
@@ -51,6 +52,7 @@ class maglev_hash:
             skip = (str_hash(backend) % (self.lookuptab_size-1)) + 1
             iRows = []
             for j in range(self.lookuptab_size):
+                # keypoint1: ==>
                 iRows.append( (offset + j * skip) % self.lookuptab_size )
             self.permutation.append(iRows)
     def populate(self):
@@ -59,6 +61,7 @@ class maglev_hash:
         next_idx = [ 0 for i in range(self.backends_num) ]
         entry = [ -1 for i in range(self.lookuptab_size) ]
         filled_entry = 0
+        # keypoint2 ==>
         while True:
             for idx_backend in range(self.backends_num):
                 c = self.permutation[idx_backend][ next_idx[idx_backend] ]
@@ -73,12 +76,14 @@ class maglev_hash:
                     return
     def debug_lookuptab(self, indent):
         print(indent + "debug lookup table content: ")
-        for i in self.lookuptab:
-            print(indent*2 + str(i) + " <--> " + self.backend_list[ i ])
+        lookup = [ self.backend_list[node] for node in self.lookuptab ]
+        print(indent*2+ str(lookup) )
+        # for i in self.lookuptab:
+            # print(indent*2 + str(i) + " <--> " + self.backend_list[ i ])
     def debug_print_maglev(self, indent):
         print(indent + ("nodes number: %d" % self.backends_num))
-        for node in self.backend_list:
-            print(indent*2 + node)
+        for i in range(self.backends_num):
+            print(indent*2 + self.backend_list[i] + ": prefer list => " + str(self.permutation[i]) )
         self.debug_lookuptab(indent)
 
 if __name__ == '__main__':
@@ -101,6 +106,6 @@ if __name__ == '__main__':
     test1.debug_print_maglev(indent)
 
     # remove a existing node
-    test1.del_node(nodes[2])
-    print("====== add a new node ======")
+    test1.del_node(nodes[-1])
+    print("====== remove an existing node ======")
     test1.debug_print_maglev(indent)

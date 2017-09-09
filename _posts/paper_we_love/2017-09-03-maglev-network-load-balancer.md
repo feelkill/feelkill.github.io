@@ -117,12 +117,70 @@ muxing是发送端。NIC将发送由 p_sent指针指向的数据包，然后前�
 
 ### 一致性哈希表
 
+一致性哈希表的想法是，生成一个查询表，每一个后端占据该查询表中的一部分位置项。这种方法可以为后端选择提供两个属性：
 
+* load balancing, 每一个后端接收到基本相同数目的连接，即需要更均匀地分布；
+* minimal disruption， 当后端集合变化时，一个连接最有可能被发送到之前它所在的后端；即需要最小量的重分布；
+
+**效率**
+
+這里需要注意，如果 M 相当接近 N 的話，整体效率很容易落入最差狀況。但是如果 M>>N ，比較容易將效率落入平均的狀況。
+
+  * 平均狀況: O(MlogM)
+  * 最差狀況: O(M^2)
+
+其中：M 是表示 lookup table 的大小（必须是一个prime number）．N是表示后端节点的个数。
+
+**流程**
+
+ * 首先 Maglev Hashing 会先把所有的 Preference List 产生出來；
+ * 通过产生好的 Preference List 开始将节点一个个地加入并且生成出Lookup table来；
+
+这个算法的实现过程将以代码实现来说明, [实现代码链接](https://github.com/feelkill/feelkill.github.io/blob/master/pieces_of_codes/maglev-hashing-imple.py)。在python 3.6下运行这段代码可以得到如下输出的信息：
+
+1. 初始化为5个后端， 查询表大小为13， 各个后端的prefer list为：
+
+```
+        backend-0: prefer list => [3, 8, 0, 5, 10, 2, 7, 12, 4, 9, 1, 6, 11]
+        backend-1: prefer list => [2, 5, 8, 11, 1, 4, 7, 10, 0, 3, 6, 9, 12]
+        backend-2: prefer list => [3, 11, 6, 1, 9, 4, 12, 7, 2, 10, 5, 0, 8]
+        backend-3: prefer list => [10, 4, 11, 5, 12, 6, 0, 7, 1, 8, 2, 9, 3]
+        backend-4: prefer list => [7, 3, 12, 8, 4, 0, 9, 5, 1, 10, 6, 2, 11]
+```
+各个后端在查询表中占据的信息为：
+
+```
+    backend-0, backend-1, backend-1, backend-0, backend-3, backend-1,
+    backend-2, backend-4, backend-0, backend-2, backend-3, backend-2, 
+    backend-4
+```
+
+2. 增加一个后端backend-5之后，（保持查询表大小不变），各个后端的prefer list为：
+
+```
+        backend-0: prefer list => [3, 8, 0, 5, 10, 2, 7, 12, 4, 9, 1, 6, 11]
+        backend-1: prefer list => [2, 5, 8, 11, 1, 4, 7, 10, 0, 3, 6, 9, 12]
+        backend-2: prefer list => [3, 11, 6, 1, 9, 4, 12, 7, 2, 10, 5, 0, 8]
+        backend-3: prefer list => [10, 4, 11, 5, 12, 6, 0, 7, 1, 8, 2, 9, 3]
+        backend-4: prefer list => [7, 3, 12, 8, 4, 0, 9, 5, 1, 10, 6, 2, 11]
+        backend-5: prefer list => [3, 8, 0, 5, 10, 2, 7, 12, 4, 9, 1, 6, 11]
+```
+
+各个后端在查询表中占据的信息为：
+
+```
+    backend-0（不变）, backend-0,        backend-1（不变）, backend-0（不变）, backend-3（不变）, backend-1（不变）, 
+    backend-2（不变）, backend-4（不变）, backend-5,        backend-5,        backend-3（不变）, backend-2（不变）, 
+    backend-4（不变）
+```
+
+可以看出，在新增或者移除后端节点之后，对于后端选择的结果基本是均匀的。
 
 ## 参考
 * [論文中文導讀 Maglev](http://www.evanlin.com/maglev/)
 * [Wiki Consistent_hashing](https://en.wikipedia.org/wiki/Consistent_hashing)
 * [Go implementation of maglev hashing](https://github.com/dgryski/go-maglev)
+* [python实现代码链接](https://github.com/feelkill/feelkill.github.io/blob/master/pieces_of_codes/maglev-hashing-imple.py)
 * [每天进步一点点——五分钟理解一致性哈希算法(consistent hashing)](http://blog.csdn.net/cywosp/article/details/23397179)
 * [Distributed Systems Part-1: A peek into consistent hashing!](https://loveforprogramming.quora.com/Distributed-Systems-Part-1-A-peek-into-consistent-hashing)
 * [Google Maglev 牛逼的网络负载均衡器](https://segmentfault.com/a/1190000009565788)
