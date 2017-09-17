@@ -146,7 +146,7 @@ def show_in_char_format(lookup_size, init_nodes):
     plt.ylabel("number of distributes")
     plt.title("Maglev Hashing")
     plt.show()
-    plt.savefig("maglev_hash_bar1.jpg")
+    # plt.savefig("maglev_hash_bar1.jpg")
 
 if __name__ == '__main__':
     show_in_text_format(13, 5)
