@@ -4,6 +4,11 @@
 # author: zhangchaowei
 #
 
+import numpy as np
+import matplotlib.mlab as mlab
+import matplotlib.pyplot as plt
+
+# max size of lookup table size
 max_lookup_tab_size = 65537
 
 # node name hashing function
@@ -76,21 +81,21 @@ class maglev_hash:
                     return
     def debug_lookuptab(self, indent):
         print(indent + "debug lookup table content: ")
-        lookup = [ self.backend_list[node] for node in self.lookuptab ]
+        lookup = self.get_node_in_lookuptab()
         print(indent*2+ str(lookup) )
         # for i in self.lookuptab:
             # print(indent*2 + str(i) + " <--> " + self.backend_list[ i ])
+    def get_node_in_lookuptab(self):
+        return [ self.backend_list[node] for node in self.lookuptab ]
     def debug_print_maglev(self, indent):
         print(indent + ("nodes number: %d" % self.backends_num))
         for i in range(self.backends_num):
             print(indent*2 + self.backend_list[i] + ": prefer list => " + str(self.permutation[i]) )
         self.debug_lookuptab(indent)
 
-if __name__ == '__main__':
+def show_in_text_format(lookup_size, nodes_num):
     # test case
     indent = "    "
-    lookup_size = 13
-    nodes_num = 5
     nodes = []
     for i in range(nodes_num):
         nodes.append("backend-%d" % i)
@@ -109,3 +114,40 @@ if __name__ == '__main__':
     test1.del_node(nodes[-1])
     print("====== remove an existing node ======")
     test1.debug_print_maglev(indent)
+
+def show_in_char_format(lookup_size, init_nodes):
+    nodes = []
+    for i in range(init_nodes):
+        nodes.append("backend-%d" % i)
+    test1 = maglev_hash(nodes, lookup_size)
+    prev_lookup = test1.get_node_in_lookuptab()
+    curr_loopup = None
+    # add new node until (numbaer of node) is equal to (number of lookup table)
+    y_num_diff = [lookup_size]
+    x_num_nodes = [init_nodes]
+    while init_nodes < lookup_size:
+        test1.add_node( "backend-%d" % init_nodes )
+        curr_loopup = test1.get_node_in_lookuptab()
+        i, n = 0, 0
+        while i < lookup_size:
+            if prev_lookup[i] != curr_loopup[i]:
+                n += 1
+            i += 1
+        y_num_diff.append(n)
+        prev_lookup = curr_loopup
+        init_nodes += 1
+        x_num_nodes.append(init_nodes)
+    # print x_num_nodes
+    # print y_num_diff
+    # show its figure
+    fig = plt.figure()
+    plt.bar(x_num_nodes, y_num_diff, 0.4, color="green")
+    plt.xlabel("number of nodes")
+    plt.ylabel("number of distributes")
+    plt.title("Maglev Hashing")
+    plt.show()
+    plt.savefig("maglev_hash_bar1.jpg")
+
+if __name__ == '__main__':
+    show_in_text_format(13, 5)
+    show_in_char_format(13, 1)
