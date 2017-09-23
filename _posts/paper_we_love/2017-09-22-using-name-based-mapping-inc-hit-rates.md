@@ -28,7 +28,7 @@ keywords: 一致性哈希表, consistent hashing, random trees
 
 算法name-based mapping的典型描述就是： maps requests to servers such that requests for the same object are sent to the same server, while requests for different objects are split among multiple servers.
 
-对象和服务器之间的 **affinities 亲和性** 是指 all clients send requests for the same object to the same server. cache affinities的研究，将task发送到已经缓存了数据的处理器上，是可以提升cache hit rate.
+对象和服务器之间的 **affinities 亲和性** 是指 all clients send requests for the same object to the same server. cache affinities的研究显示，将task发送到已经缓存了数据的处理器上，是可以提升cache hit rate.
 
 ![](/assets/2017/hash-name-based-mapp00.jpeg)
 
@@ -61,6 +61,107 @@ keywords: 一致性哈希表, consistent hashing, random trees
 
 ## mapping requests to servers的模型
 
+本质上就是一个将对对象k的请请r映射到一个服务器Si的函数。
+
+![](/assets/2017/hash-name-based-mapp01.jpeg)
+
+**Static Priority Mapping**
+
+连接哪个server是静态配置的，例如 f(i)=i。 每个client会尝试着去连接每一个server，直接有响应。可以看出，这种方法具有fault tolerance，但是没有考虑响应时间 以及服务器上cache的利用率问题。
+
+**Minimal Load Mapping**
+
+当前系统主要使用的方法，client会选择当前最小负载的服务器进行请求。 主要的问题是：
+1. 需要一个额外的机制来支撑，就是在整个cluster中找出最小负载的哪个机器；这个探测有是代价的，并且要考虑负载检查的及时性问题，因为整个集群内每个机器的负载信息有可能在client知道后已经过时了。 
+2. 在最坏的情况下，有可能所有的client都连接到了某一个服务上，导致很高的负载； 
+
+**Fastest Response Mapping**
+
+选择ping最先响应的那个server来进行请求。 如果地理距离差不多的话，这个算法会退化为load minimal mapping算法。
+
+**Round Robin Mapping**
+
+最常用的方法就是 f(i) = i (mod m), 通过模算法将请求i映射到m个服务器的某一个上。
+
+Theorem 2: Round Robin Load Balancing. 当request rate高的时候， 这种方法可以达到 Load Balancing。
+
+**Randomm Mapping**
+
+依据random split理论，随机选择一个server来进行request发送。
+
+Theorem 3: Random Split Load Balancing 
+
+## mapping based on object names
+
+1. 本质上也是一个hash函数， Key是object name, 而bucket是servers。
+2. 考虑到server可能随时go up, go down，所以hash的结果不可能是一个server，而应该是 a ordered list of servers。
+3. 这个列表的 ordered则是使用一个打分机制进行排序的。把 object name + server address作为输入， 通过某个函数方法为每一个server计算出一个分数来，然后依据分数的高低来选择server。
+
+![](/assets/2017/hash-name-based-mapp02.jpeg)
+
+k是对象名字, Si是服务IP地址， Weight是一个打分函数，输入是k和Si.
+
+## HRW的属性
+
+### low overhead
+
+该算法的输入是object name + server address， 所以可以进行local decision。
+
+当server go down/up的时候， 只需要把所有涉及该down/up server的请求进行 remapping就好。 只要重新为这些请求选择分数最大的server即可。
+
+### load balancing
+
+Theorem 4: Hash Allocaton Request Balancing, 说明了随着对象数目的增大， 发送给所有服务器的请求数目将是等同的.
+
+> states that the coefficient of variation of qi vanishes as the number of object K becomes large. and qi represents the probability that a request will be sent to Si。
+
+Theorem 5: Hash Allocaton Load Balancing, 说明了当对象数目和请求大小都很大的时候， 每一个服务的处理负载将是均衡的。
+
+> states that the amount of processing done by each server is balanced when both K and N are large. let N be request train size
+> the load balancing effectiveness inscreases as the demand increases.
+
+### high hit rate
+
+没有replication，可以提高hit rate
+
+### mininal disruption
+
+达到了最小下限 1/m
+
+### 比较 
+
+**Replication**
+
+Theorem 6: Replication growth for random selection
+
+replication会带来一些负面影响，包括： cache space的浪费； 由于cache miss带来的latency较大； full replication的影响会放得更大。
+
+**caching**
+
+Theorem 7: Partitioning Non Harmful 分区对于缓存是无害的。
+
+> under an optimal caching schema, the expected hit rate in a partitioned mappng will be greater than or equal to the expected hit rate in a non-partitioned mapping.
+
+而hash函数的功能就相当于分区的，所以使用HRW会带来hit rate的提升。
+
+Corollary 1: HRW Applicability 
+
+> HRW is particulary suitable for domains where there are **a large number of requestable objects, the request rate is high, and there is a high probability** that a requested object will be requested again.
+
+## HRW实现
+
+所有client应该使用相同的hash函数。 推荐使用如下函数来计算分数。
+
+![](/assets/2017/hash-name-based-mapp03.jpeg)
+
+D(k)是依据对象名称k计算得到的digest数值， 而Si是集群中第i个服务的地址。
+
+Theorem 8: 当且仅当 Si == Sj (mod 2^31)时， 函数Wrand中Si和Sj才会有关联。
+
+### 记分函数的选择和比较
+
+上面给出的记分函数是比较好的。 当然，可能不同的域需要对hash函数进行选择比较。
 
 ## 参考
 * using name-base mapping to increase hit rates
+* [Rendezvous or Highest Random Weight (HRW) hashing algorithm](http://www.csforge.com/?p=17)
