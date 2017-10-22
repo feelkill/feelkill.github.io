@@ -6,15 +6,15 @@ category: 网络
 keywords: linux network, sctp, data center
 ---
 
-# SCTP Performance in Data Center Environments
+## SCTP Performance in Data Center Environments
 
 本论文是英特尔公司发表的，发表时间为2014年10月，由Krishna Kant发表。
 
-## 简介
+### 简介
 
 本论文首先对SCTP进行了简单介绍，然后对TCP和SCTP进行了黑盒式地对比它们在linux中的实现和性能；接着对比了采取相应地优化后，SCTP所带来的性能提升。最后讨论了SACK，并进行了总结。
 
-## SCTP的特点与数据中心的要求
+### SCTP的特点与数据中心的要求
 
 TCP的特点主要有:
 
@@ -54,7 +54,7 @@ send, connection init, ...) is sent as a “chunk” with its own header to iden
 
 RDMA可以减少内存拷贝，但是，an effective implementation of RDMA becomes very difficult on top of a byte stream abstraction。所以才会考虑SCTP。
 
-## SCTP与TCP的性能比较
+### SCTP与TCP的性能比较
 
 SCTP的实现主要有两个， 一是[LK-SCTP](http://lksctp.sourceforge.net/), 另外一个是开源版本[KAME](http://www.sctp.org)。本论文方要采取前者进行测试比较。
 
@@ -117,7 +117,7 @@ TSO for SCTP would have to be lot more complex than that for TCP and will clearl
 
 在数据中心的环境中，低延时要比高吞吐量重要得多，所以将NO-DELAY设置打开是一个正确的选择。by default, whenever the window allows a MTU to be sent, SCTP will build a packet from the available application messages instead of waiting for more to arrive
 
-### 多流的性能
+#### 多流的性能
 
 **测试环境**
 
@@ -140,7 +140,7 @@ in effect, the streams are about the same weight as associations; furthermore, t
 * sendmsg()函数的实现， locks the socket at the beginning of the function & unlocks it when the message is delivered to the IP-Layer. This problem can be alleviated by a change in the TCB (transport control block) structure along with finer granularity locking
 * A more serious issue is on the receive end – since the stream id is not known until the arriving SCTP has been processed and the chunks removed, there is little scope for simultaneous processing of both streams.
 
-### SCTP性能加强
+#### SCTP性能加强
 
 **实现上的问题**
 
@@ -163,9 +163,32 @@ in effect, the streams are about the same weight as associations; furthermore, t
     * the size of the association structure is an order of magnitude bigger at around 5KB. 
     *  Large TCB sizes are undesirable both in terms of processing complexity and in terms of caching efficiency
 
-## Performance under Errors
+### Performance under Errors
 
 a reduction in SACK frequency is detrimental to throughput performance at high drop rates, but is desirable at lower drop rates.
 
+## SCTP performance and security
+
+本论文的主要贡献在于对SCTP协议格式的介绍，以及对新特性的简单测试。主要的点有：
+
+1. Overview of protocol format. 使用图片来介绍sctp协议的格式。
+    * sctp common header format
+    * 12 control chunk types and 1 data chunk type 协议类型的列表
+2. four-way Association initiation 图片化展示了四次握手过程
+3. SCTP state diagram 状态转换图
+4. 本论文的测试要简单得多，并没有对sctp进行深入的性能测试。
+
+## Portable and Performant Userspace SCTP Stack
+
+本论文主要是从user space来实现sctp协议的讨论。除此之外，本论文还对当前已有的协议工作进行了汇总，包括了linux/iOS/Windowns等多个平台上支持sctp的状况。
+
 ## 参考
 * [SCTP Performance in Data Center Environments](https://www.researchgate.net/publication/266865697_SCTP_Performance_in_Data_Center_Environments)
+* SCTP performance and security
+* [sctplib Github](https://github.com/dreibh/sctplib)
+* [sctplib Download](http://www.sctp.de/sctp-download.html)
+* [A version of the SCTP NKE running on Mac OS X 10.11 (El Capitan)](https://github.com/sctplab/SCTP_NKE_ElCapitan)
+* [SctpDrv: an SCTP driver for Microsoft Windows](http://www.bluestop.org/SctpDrv/)
+* [SCTP Project on OpenJDK](http://openjdk.java.net/projects/sctp/)
+* [Head-of-line blocking](https://en.wikipedia.org/wiki/Head-of-line_blocking)
+* [linux kernel sctp](http://lksctp.sourceforge.net)
