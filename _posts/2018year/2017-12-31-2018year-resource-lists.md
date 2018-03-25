@@ -10,3 +10,4 @@ keywords: codes, resources
 * [libevent源码深度剖析](http://www.cnblogs.com/lfsblack/p/5498556.html) 本来想写一篇关于libevent的文章，但是感觉写得不会比这篇好，所以就放弃了，直接引用原文章链接了
 * [Python for Data Analysis, 2nd Edition](https://github.com/BrambleXu/pydata-notebook)
 * [Python for Data Analysis, 2nd Edition, my Github](https://github.com/feelkill/pydata-book)
+* [奥莱利图书样例代码网址](https://resources.oreilly.com/explore/projects/starred)
