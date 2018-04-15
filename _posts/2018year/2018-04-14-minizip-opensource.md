@@ -127,8 +127,23 @@ minizip的内存并没有像IO那样预留好接口，需要修改代码才能�
 
 这也正说明了，如果要进行内存管理定制化的话，需要重新定义ALLOC和TRYFREE两个宏，并且需要进行源码级的修改。还好，minizip的license是比较友好的，是可以进行源码修改的。至于修改的方法，可以参考IO定制的方法进行即可。
 
+## 其他的zip C开源包
+
+主要是zziplib，查找了一些介绍文章比较少，但是其用法与minizip倒是大同小异的。zziplib提供的函数接口稍微多且用法复杂一些，主要围绕如下几个概念展开：
+
+* ZZIP\_FILE, 对应zip归档中的具体文件
+* ZZIP\_DIR, 对应zip归档中的目录信息，具体的项结构体为ZZIP\_DIRENT
+
+操作的方法大体类似，也需要从目录级遍历到文件级。
 
 ## 参考文档
 * [Minizip: Zip and UnZip additionnal library](http://www.winimage.com/zLibDll/minizip.html)
 * [zlib opensource](https://www.zlib.net)
 * [使用Zlib库进行文件的压缩和解压](https://www.jianshu.com/p/cca8e5c858fc)
+* [zziplib Library Functions](http://zziplib.sourceforge.net/zziplib.html)
+* [zziplib basic API](http://zziplib.sourceforge.net/zzip-basics.html)
+* [zziplib sourceforge](http://zziplib.sourceforge.net/zzip-zip.html)
+* [zziplib github](https://github.com/gdraheim/zziplib)
+* [zziplib](http://zziplib.sf.net)
+* [zziplib arch linux](https://security.archlinux.org/package/zziplib)
+* [zziptest.c](http://zziplib.sourceforge.net/zziptest.c)
