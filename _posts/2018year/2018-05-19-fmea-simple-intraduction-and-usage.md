@@ -14,7 +14,7 @@ keywords: Fault Tree Analysis, NASA, EDrawMax, OpenFTA, Free FTA, FMEA
 
 FMEA, Failure Mode and Effect Analysis 一直广泛使用于硬件设计中，通过建模来避免现场出问题。之后，软件领域借鉴此经验，将该方法引入进来，用来解决软件领域的类似问题。软件领域有其特殊性，人为错误占了软件问题的一大部分。
 
-![不同阶段发现缺陷的修复代价](fmea-software-fault-cost.png)
+![不同阶段发现缺陷的修复代价](/assets/2018/fmea-software-fault-cost.png)
 
 图1说明了软件不同阶段中能够发现的缺陷数目和代价，可以看到，问题发现得越早，其修复的代价也就就小，问题的大规模发现主要集中在coding和两个测试阶段。在现场能够发现的问题是很少的，然而其分析和修复的代价却是相当得高。也正因为如此，发希望将更多的问题，特别是设计方面的问题，提前发现得越早越好。
 
