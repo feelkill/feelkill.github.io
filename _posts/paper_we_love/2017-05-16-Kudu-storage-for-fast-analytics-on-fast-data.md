@@ -12,7 +12,7 @@ keywords: Kudu, 数据, 存储, 分析
 
 作者： Cloudera公司的一批大佬
 
-![](http://blog.talkingdata.net/wp-content/uploads/2015/10/0.jpg)
+![](/assets/2017/kudu-log.jpg )
 
 > <SUP>[1]</SUP>Kudu，对应中文的含义应该是非洲的一种带条纹的大羚羊。
 > Cloudera则给自己新开发的大数据存储系统命名为Kudu，应该代表了Kudu速度快是一大特点。
@@ -36,7 +36,7 @@ Kudu是为结构化数据设计的开源存储引擎，它同时支持**低延�
 
 > <SUP>[1]</SUP>说到开发Kudu的初衷，Cloudera的解释是他们在客户的现场做大数据项目时发现，真正客户面临的问题在当前的Hadoop生态系统下，都是一个混合的架构，如下图所示：
 
-![](http://blog.talkingdata.net/wp-content/uploads/2015/10/12.jpg)
+![](/assets/2017/kudu-12.jpg)
 
 > 在这个架构中，HBase被用来当作数据载入和更新的存储，这个存储适合于实时的查询，而数据随后被处理为parquet格式的文件，从而适合后续的利用Impala等工具进行分析。
 
@@ -57,7 +57,7 @@ Kudu是为结构化数据设计的开源存储引擎，它同时支持**低延�
 
 Kudu在Hadoop生态系统中所处的角色和位置如下图所示。
 
-![](http://blog.talkingdata.net/wp-content/uploads/2015/10/21.jpg)
+![](/assets/2017/kudu-21.jpg)
 
 ## 高层次看Kudu
 
