@@ -10,9 +10,9 @@ keywords: Reactor, 设计模式, Design Pattern
 
 参考链接已经把Reactor模式讲得很是明了了，只把一些关键的图和文字要点copy+paste了过来。
 
-![Reactor模式](http://www.blogjava.net/images/blogjava_net/dlevin/Reactor_Simple.png)
+![Reactor模式](/assets/2018/Reactor_Simple.png)
 
-![Reactor模式结构UML图](http://www.blogjava.net/images/blogjava_net/dlevin/Reactor_Structures.png)
+![Reactor模式结构UML图](/assets/2018/Reactor_Structures.png)
 
 **Handle**
 
@@ -34,7 +34,7 @@ keywords: Reactor, 设计模式, Design Pattern
 
 事件EventHandler接口，实现特定事件处理逻辑。
 
-![模块交互流程](http://www.blogjava.net/images/blogjava_net/dlevin/Reactor_Sequence.png)
+![模块交互流程](/assets/2018/Reactor_Sequence.png)
 
 ## 参考链接
 
