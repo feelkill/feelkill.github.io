@@ -6,7 +6,7 @@ category: 论文
 keywords: 并发控制, OCC, 乐观并发, 事务处理
 ---
 
-论文题目: [On Optimistic Control Methods for Concurrency Control](/pieces_of_work/concurrent_control/On Optimistic Methods for Concurrency Control.pdf)
+论文题目: [On Optimistic Control Methods for Concurrency Control](http://sites.fas.harvard.edu/~cs265/papers/kung-1981.pdf)
 
 本论文发表之时，数据库系统中并发控制最常见的方法是对数据对象加锁。本论文提出了乐观方法＋事务备份(transaction backup)进行并发控制，以期望达到最理想的状态，即事务之间的冲突不再发生。
 
