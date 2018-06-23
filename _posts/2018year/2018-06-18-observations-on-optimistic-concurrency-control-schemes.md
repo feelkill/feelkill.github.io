@@ -11,6 +11,12 @@ keywords: 乐观并发控制， OCC，
 
 ---
 
+
+
+此论文题目为：[observations on optimistic concurrency control schemes](http://wwwlgis.informatik.uni-kl.de/cms/fileadmin/publications/1984/Hae84.InformationSystems.pdf)
+
+
+
 ## 摘要
 
 OCC的一个假设前提是，**事务过程中的读写冲突是非常少的**。在事务提交之前，需要校验是否有冲突发生。**冲突发生的解决方案主要是事务回滚**。本论文主要介绍和比较了两种OCC方案，并且研究了一些实现上的细节，以及与两阶段锁协议的优缺点比较。
@@ -80,7 +86,126 @@ OCC的设计是为了减少加锁负载，它的一个假设前提是：事务�
 
 ### Backward Oriented OCC
 
+BOCC<u>在事务Tj的validation阶段检查它的读数据RS(Tj)是否与任何一个事务Ti的写数据WS(Ti)有交集</u>，<u>而Ti与Tj是并发执行的、并且早于Tj结束了读阶段</u>。
 
+假定Tj开始的时候，Tstart为给其他事务赋值的最大号；当Tj进入validation阶段时，此时的最大事务号为Tfinish。那么下边的伪代码将说明事务Tj的验证过程，并决定事务Tj的命运。
+
+```
+valid = true;
+
+for Ti = T<sub>start+1</sub> TO T<sub>finish</sub> 
+
+{
+
+    if RS(Tj)与WS(Ti)的交集不为空，then
+
+        valid = false;
+
+}
+
+if valid then commit
+
+Else abort
+```
+
+![](/assets/2018/bocc-validation-scenario.png)
+
+在上面的图中，需要检验事务Tj的读数据与事务T2+T3的写数据。因为这两个事务已经提交了，如果数据存在交集的话，唯一的解决冲突的方案就是回滚事务Tj。
+
+这个过程允许在一个时刻仅有一个validting and committing的事务。 如果其他事务想要提交的话，就必须等待直到进入这个临界区后执行；在临界区中，就可以处理这个事务与其他事务的读阶段了。很明显，如果没有这个临界区的话，事务的validation就可能会进入到一个无限重复需要检验的过程中。
+
+需要注意的是，不再需要关注已提交事务的读集合，但是重叠事务的所有写集合是需要保留的，直到它们的最后一个并发事务结束了。显然，对于一个有大量写的长事务而言，这个要求是相当不易满足的。
 
 ### Forward Oriented OCC
+
+FOCC<u>在事务Tj的validation阶段检验它的写集合WS(Tj)是否与所有事务Ti的任一读集合RS(Ti)有交集，事务Ti此时还尚未完成它们的读阶段</u>。这种策略保证读集合总是干净的。如果写集合与所有其他活跃事务的读集合无冲突，写集合才能够propagated。
+
+检验过程的伪代码如下：
+
+```
+valid = true
+
+for Ti = Tact1 TO Tactn DO
+
+    if WS(Tj) 与RS(Ti)的交集不为空， THEN
+
+        valid = false
+
+IF valid then commit
+
+ELSE resolve confiict
+```
+
+FOCC将并发控制的担子放在子写事务上。它要求只有快要结束的写事务需要进行测试是否满足串行化验证。所以，读事务一旦到了EOT（end of transaction），将自动提交。
+
+解决冲突的策略主要有：
+
+#### defer due to conflicting readers
+
+如果冲突事务的集合中都是读事务，那么可以延后事务Tj。当所有的读事务都结束的时候，冲突就结束了，retry事务Tj的validation。这种策略明显是一种乐观的方法，如果新的读事务还与Tj冲突、源源不断到来的时候，事务Tj就有可能无限期地被延迟下去。
+
+#### defer due to conflicting wirter
+
+如果冲突事务的集合中有部分是写事务的话，延后策略可能提供了一种无伤害的冲突解决方案；其前提是，冲突写事务的定集合与事务Tj的写集合是分离的、没有交集的。那么，在冲突事务提交 之后，延迟的事务Tj再重做。这种策略同样也体现的是一种乐观的思想。
+
+#### kill and commit 
+
+因为所有的冲突事务并未提交，所以可以选择一个事务将其结束移除。假设Tj是一个长写事务，而另一个冲突事务刚刚开始执行，这种情况下就可以选择这种方案。
+
+#### abort
+
+直接将事务Tj回滚掉。
+
+在具体的系统实现方案中，可以采取上面的几种策略组合。
+
+FOCC的关键点是，无论何时一个写事务提交，都需要与不断变化的读集合进行check。可靠的做法是，在一个临界区内对所有的活跃事务列表进行，然而这对性能是很大的伤害。
+
+比较BOCC与FOCC可以观察如下：
+
+- 写集合通常是读集合的一个小的子集。如果不是的话，新插入的数据片断会导致记录级别的冲突； 
+- BOCC必须将自己的读集合（潜在性的量大）与旧的写集合（潜在性的数目多）进行比较。二者都会随着事务检验的持续而增长；
+- FOCC不检验读集合。它将自己的写集合与其他事务的写集合（读集合的一小部分）进行check。
+- FOCC策略中的validation更困难，因为在读阶段中允许并发行为其代价更大，检测的是一个不断变化 的集合。与BOCC相比，check频率会少一些。
+
+## 实现上的考虑
+
+
+
+## OCC方案的一些特性
+
+### 事务回滚的简单性
+
+使用带了事务缓存的CC方案更容易实现事务的回滚，可能是用户错误、数据错误、检验失败、timeout等。
+
+### 事务回滚的比率高
+
+加锁方案中冲突的解决方案是等待、死锁检测、死锁解决。而OCC方案中冲突解决则是很高效的回滚。
+
+同样，OCC比加锁方案有着更高的回滚比率。有论文显示，加锁方案的回滚比率为10%，OCC方案的回滚比率为36%。
+
+### fair scheduling
+
+失败事务再次执行时，还有可能再失败。要获得fair scheduling需要采取一些适当的冲突解决策略。BOCC的策略就是简单的回滚； FOCC的策略则要更有弹性。kill策略在validation没有失败的情况下，可以达到较高的吞吐量。
+
+### need of serialization
+
+失败的事务在最坏的情况下，需要重新执行。也可以采取一些加锁协议来实现strict serialization。另外，也可以使用一些负载平衡算法。
+
+### storage overhead
+
+### control of phantom problems
+
+### time-consuming force schemes
+
+### deferred checking of consistency constraints
+
+### deferred modification of access path data
+
+### complexity of query processing
+
+### use of record-level CC
+
+### drawbacks of page-level CC
+
+## 与加锁方法的比较
 
