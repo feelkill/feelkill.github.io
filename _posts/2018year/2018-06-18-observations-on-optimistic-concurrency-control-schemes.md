@@ -175,27 +175,33 @@ FOCC的关键点是，无论何时一个写事务提交，都需要与不断变�
 
 ### 事务回滚的简单性
 
-使用带了事务缓存的CC方案更容易实现事务的回滚，可能是用户错误、数据错误、检验失败、timeout等。
+使用带了事务缓存的CC方案更容易实现事务的回滚，回滚的原因可能是用户错误、数据错误、检验失败、timeout等。
 
 ### 事务回滚的比率高
 
-加锁方案中冲突的解决方案是等待、死锁检测、死锁解决。而OCC方案中冲突解决则是很高效的回滚。
+加锁方案中冲突的解决方案是锁等待，或者死锁检测和死锁解决。而OCC方案中冲突解决则是很高效的回滚。
 
-同样，OCC比加锁方案有着更高的回滚比率。有论文显示，加锁方案的回滚比率为10%，OCC方案的回滚比率为36%。
+一般认为，锁等待是可以减少事务冲突的风险。所以，与加锁方案相比，OCC的事务回滚占比要更高。有论文显示，加锁方案的回滚比率为10%，OCC方案的回滚比率为36%。
 
 ### fair scheduling
 
-失败事务再次执行时，还有可能再失败。要获得fair scheduling需要采取一些适当的冲突解决策略。BOCC的策略就是简单的回滚； FOCC的策略则要更有弹性。kill策略在validation没有失败的情况下，可以达到较高的吞吐量。
+失败事务再次执行时，还有可能再失败。要获得fair scheduling需要采取一些适当的冲突解决策略。BOCC的策略就是简单的回滚。
+
+FOCC的策略则要更有弹性。kill策略在validation没有失败的情况下，可以达到较高的吞吐量。要对失败回滚多次的事务特别关注，对于采取的简单kill策略可以做一些相应的调整。
 
 ### need of serialization
 
-失败的事务在最坏的情况下，需要重新执行。也可以采取一些加锁协议来实现strict serialization。另外，也可以使用一些负载平衡算法。
+失败的事务在最坏的情况下，需要重新执行，也可能是一而再、再而三地失败、重执行。To limit  the thrashing situations and to solve the livelock prevented by using hierarchical locks, e.g. at the problem, these critical transactions must be enabled relation or segment level. On the other hand, the to commit with a few restarts in the worst case. 也可以采取一些加锁协议来实现strict serialization。另外，也可以使用一些负载平衡算法。
 
 ### storage overhead
 
+
+
 ### control of phantom problems
 
-### time-consuming force schemes
+### time-consuming FORCE schemes
+
+如果事务修改了的对象在EOT时候强制要物化到磁盘的数据库上（以防止由于系统crash而导致的partial redo），那么：1） 记录级CC，以同步方式执行会引起潜在的长延时； 2） 页级CC，与ATOMIC结合使用弹性会更好。
 
 ### deferred checking of consistency constraints
 
@@ -209,3 +215,15 @@ FOCC的关键点是，无论何时一个写事务提交，都需要与不断变�
 
 ## 与加锁方法的比较
 
+加锁方案保证任一时刻点数据库的镜像是一致的。正因为如此，该方案可能牺牲了潜在的并行度。然而，这些方案可以提供了这样的能力：你可以选择合适的控制层次来减少竞争想关的问题。
+
+为了增强并发， OCC允许事务执行过程中产生私有的数据副本。OCC核心问题在于commit处理时对这些副本进行merge，从而需要获得一个事务一致性的数据库镜像。正如前面所讨论，当这些副本不匹配的时候，产生了一系列的问题和困难。从数据库使用来看，OCC更应该使用page level。然而，加锁的方法并没有此类的限制，它还可以选择使用记录、甚至是字段的级别。
+
+此外，为了减少commit处理或者减少主存使用，需要引入特别的假定（NOSTEAL/NOFORCE）。加锁方案同样没有这些要求和假定。
+
+对于一些关注并发控制的设计决定，需要考虑下面的这些属性和要求：
+
+* 热点数据需要串行化可控； 
+* 如果等待和死锁并很少见，加锁与OCC同样的好； 
+* 每一个系统需要一些控制层次从而提供高效地读写操作； 
+* 在处理记录“不存在”的问题上，加锁方法看起来更好些；
