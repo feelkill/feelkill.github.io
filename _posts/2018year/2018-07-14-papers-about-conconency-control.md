@@ -102,3 +102,9 @@ locked point就是指第一个阶段的末尾点，该点决定了a serializatio
 
 #### SYNCHRONIZATION TECHNIQUES BASED ON TIMESTAMP ORDERING
 
+## 参考
+
+[Wiki: Timestamp-based concurrency control](https://en.wikipedia.org/wiki/Timestamp-based_concurrency_control)
+
+[Wiki: Thomas write rule](https://en.wikipedia.org/wiki/Thomas_write_rule)
+
