@@ -178,14 +178,32 @@ Read/write transactions must not delete or overwrite record versions relevant fo
 
 Since epoch boundaries are consistent with the serial order, Silo treats whole epochs as the durability commit units. 
 
+所有属于epoch e的事务的日志写在一起。在故障之后， 系统将会检查日志，然后找到durable epoch D,   此为成功记日志的事务所在的最近epoch。 然后系统恢复所有小于等于D的事务，其他的不管。 不恢复再多这一点很重要： 尽管整个epoch是一致的， 但是一个epoch之内的serial order却是无法从日志中恢复的。  所以， 重放一个epoch中事务的一部分日志，会产生非一致的状态。 这同样意味着， epoch周期直接影响着事务提交 的平均时延。 
+
+Silo中有一定数量的线程用于处理日志， 每一个日志线程负责不同的工作纯种子集。 每一个线程写入的日志位于不同的磁盘上。 
+
+当一个工作线程提交一个事务时， 它会创建一个日志记录，包含了事务TID、记录信息（表、键值、数值）。 日志直接以磁盘格式记录在本地内存缓存中。 当缓存满或者新epoch开始的时候，工作线程会把本地缓存发布到对应的日志线程上， 然后通过写入一个全局变量ctid w来发布其最后的已提交TID。 
+
+日志线程以持续循环执行，每一个迭代都会计算出d之前的事务日志是可提交的。  在迭代开始之前， 首先会计算出该日志线程对应的工作线程的最小值t = min(ctid w); 从此值计算出本地durable epoch d = epoch(t) -1。 所有小于等于d的、与其关注的工作线程事务必然已经发布， 日志是完整的。 日志线程将所有日志缓存、再加一条包含d信息的数据追加到日志文件 末尾， 并且等待写盘的结束。 之后， 日志线程将d发布到对应 的全局变量dl上（每个日志线程对应一个变量）， 之后日志缓存可以被工作线程所重复使用。 
+
+有一个线程会周期性地计算并发布全局durable epoch值D=min(dl)。 所以小于等于D的事务则必定日志持久化。 那么，小于等于D的事务就可以给客户端以响应了。
+
+Silo使用记录级的redo日志，而非undo日志或者操作日志。 
+
+恢复时， 每一个日志线程会计算出最大最近的dl值， 再计算出D = min(dl)， 然后回放日志。 相同记录的日志必须以TID的顺序进行回放，以确保结果等于最新版本。 不同的记录可以并发回放。
+
+Silo并没有实现完整的检查点机制。
+
 ## 下一步阅读论文
 
 索引相关的论文
 
 * Cache craftiness for fast multicore key-value storage
 * Cache- conscious concurrency control of main-memory indexes on shared-memory multiprocessor systems 
-* PALM: Parallel architecture-friendly latch-free modifica-
-  tions to B+ trees on many-core processors
+* PALM: Parallel architecture-friendly latch-free modifications to B+ trees on many-core processors
+* Efficient locking for concurrent operations on B-trees
+* The Bw-tree: A B-tree for new hardware
+* LLAMA: A cache/storage subsystem for modern hardware
 
 锁相关的论文
 
@@ -195,3 +213,21 @@ Since epoch boundaries are consistent with the serial order, Silo treats whole e
 
 - Practical lock freedom
 - Performance of memory reclamation for lockless syn- chronization 
+
+并发控制相关
+
+- On optimistic methods for concurrency control 
+- High-performance concurrency control mechanisms for main-memory databases
+- A critique of ANSI SQL isolation levels
+- Low over- head concurrency control for partitioned main memory databases 
+- The notions of consistency and predicate locks in a database system 
+- Distributed optimistic concurrency control with reduced rollback
+- Observations on optimistic concurrency con- trol schemes 
+- Optimistic concurrency control revisited
+- Hekaton: SQL Server’s memory-optimized OLTP engine 
+
+分区相关
+
+- Skew-aware automatic database partitioning in shared-nothing
+- PLP: page latch-free shared-everything OLTP
+- Spanner: Google’s globally- distributed database 
